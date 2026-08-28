@@ -1,0 +1,36 @@
+CREATE TABLE IF NOT EXISTS products (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  sku TEXT NOT NULL UNIQUE,
+  description TEXT NOT NULL,
+  price_cents INTEGER NOT NULL,
+  security_level INTEGER NOT NULL DEFAULT 2,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_number TEXT NOT NULL UNIQUE,
+  customer_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  company TEXT,
+  address TEXT NOT NULL,
+  zip TEXT NOT NULL,
+  city TEXT NOT NULL,
+  configuration_json TEXT NOT NULL,
+  total_cents INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'new',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL,
+  product_id INTEGER NOT NULL,
+  quantity INTEGER NOT NULL,
+  unit_price_cents INTEGER NOT NULL,
+  FOREIGN KEY(order_id) REFERENCES orders(id),
+  FOREIGN KEY(product_id) REFERENCES products(id)
+);

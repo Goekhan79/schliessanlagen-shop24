@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import Shop from "./shop";
 import sql from "@/lib/db";
 

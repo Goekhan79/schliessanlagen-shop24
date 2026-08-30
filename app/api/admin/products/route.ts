@@ -12,3 +12,10 @@ if (!Number.isInteger(body.id)) return NextResponse.json({error:"ID fehlt."},{st
 await sql`UPDATE products SET name=${body.name}, description=${body.description}, price_cents=${body.priceCents}, security_level=${body.securityLevel}, active=${body.active} WHERE id=${body.id}`;
 return NextResponse.json({ok:true});
 }
+export async function DELETE(req: Request) {
+const { searchParams } = new URL(req.url);
+const id = Number(searchParams.get("id"));
+if (!Number.isInteger(id)) return NextResponse.json({error:"ID fehlt."},{status:400});
+await sql`DELETE FROM products WHERE id=${id}`;
+return NextResponse.json({ok:true});
+}

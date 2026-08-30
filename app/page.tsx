@@ -1,7 +1,7 @@
 import Shop from "./shop";
-import db from "@/lib/db";
+import sql from "@/lib/db";
 
-export default function Home() {
-  const products = db.prepare("SELECT * FROM products WHERE active=1 ORDER BY id").all() as any[];
-  return <Shop initialProducts={products} />;
+export default async function Home() {
+  const products = await sql`SELECT * FROM products WHERE active=true ORDER BY id`;
+  return <Shop initialProducts={products as any[]} />;
 }

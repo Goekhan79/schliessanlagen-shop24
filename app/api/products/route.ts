@@ -1,23 +1,18 @@
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
+import sql from "@/lib/db";
 
 export async function GET() {
-  const products = db.prepare("SELECT * FROM products WHERE active=1 ORDER BY id").all();
-  return NextResponse.json(products);
+const products = await sql`SELECT * FROM products WHERE active=true ORDER BY id DESC`;
+return NextResponse.json(products);
 }
 
 export async function POST(req: Request) {
-  const body = await req.json();
-  const { name, sku, description, priceCents, securityLevel = 2 } = body;
-  if (!name || !sku || !description || !Number.isInteger(priceCents)) {
-    return NextResponse.json({ error: "Ungültige Produktdaten." }, { status: 400 });
-  }
-  try {
-    const result = db.prepare(
-      "INSERT INTO products (name, sku, description, price_cents, security_level) VALUES (?, ?, ?, ?, ?)"
-    ).run(name, sku, description, priceCents, securityLevel);
-    return NextResponse.json({ id: result.lastInsertRowid });
-  } catch {
-    return NextResponse.json({ error: "SKU existiert bereits oder Daten sind ungültig." }, { status: 409 });
-  }
+const body = await req.json();
+if (!body.name || !body.sku || !Number.isInteger(body.priceCents)) {
+return NextResponse.json({ error: "Bitte alle Pflichtfelder ausfüllen." }, { status: 400 });
+}
+const result = await sql`INSERT INTO products (name, sku, description, price_cents, security_level)
+VALUES (${body.name}, ${body.sku}, ${body.description || ""}, ${body.priceCents}, ${body.securityLevel || 1})
+RETURNING id`;
+return NextResponse.json({ ok: true, id: result[0].id }, { status: 201 });
 }

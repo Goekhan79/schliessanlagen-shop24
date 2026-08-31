@@ -4,6 +4,9 @@ import { useState } from "react";
 const eur = (c: number) => c.toLocaleString("de-DE", { style: "currency", currency: "EUR" });
 
 function downloadOrderExcel(o: any) {
+let config: any = {};
+try { config = JSON.parse(o.configuration_json || "{}"); } catch {}
+
 const rows: [string, string][] = [
 ["Bestellnummer", o.order_number],
 ["Kunde", o.customer_name],
@@ -17,6 +20,12 @@ const rows: [string, string][] = [
 ["Menge", String(o.quantity)],
 ["Summe", (o.total_cents / 100).toFixed(2).replace(".", ",") + " EUR"],
 ["Status", o.status],
+["Projekt", config.project],
+["Kundentyp", config.customerType],
+["Türen", String(config.doors ?? "")],
+["Nutzer", String(config.users ?? "")],
+["Schlüssel", String(config.keys ?? "")],
+["Sicherheitsstufe", String(config.security ?? "")],
 ];
 
 const escape = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
@@ -29,7 +38,6 @@ a.download = `Bestellung_${o.order_number}.csv`;
 a.click();
 URL.revokeObjectURL(url);
 }
-
 export default function Admin({ initialProducts, initialOrders }: { initialProducts: any[]; initialOrders: any[] }) {
 const [products, setProducts] = useState(initialProducts);
 const [orders, setOrders] = useState(initialOrders);

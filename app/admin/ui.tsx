@@ -28,6 +28,15 @@ const rows: [string, string][] = [
 ["Sicherheitsstufe", String(config.security ?? "")],
 ];
 
+if (config.matrix && config.doors && config.roles) {
+rows.push(["", ""]);
+rows.push(["Berechtigungsmatrix", ""]);
+config.doors.forEach((door: string, i: number) => {
+const allowed = config.roles.filter((_: string, j: number) => config.matrix[i]?.[j]);
+rows.push([door, allowed.join(", ") || "-"]);
+});
+}
+
 const escape = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 const csv = "\uFEFF" + rows.map(r => r.map(escape).join(";")).join("\r\n");
 const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });

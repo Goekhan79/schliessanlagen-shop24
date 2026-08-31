@@ -3,22 +3,37 @@ import { useState } from "react";
 
 const eur = (c: number) => c.toLocaleString("de-DE", { style: "currency", currency: "EUR" });
 
-function toCSV(orders: any[]) {
-const headers = ["Nr.","Kunde","E-Mail","Telefon","Firma","Adresse","PLZ","Ort","Produkt","Menge","Summe","Status"];
-const rows = orders.map(o => [
-o.order_number, o.customer_name, o.email, o.phone, o.company,
-o.address, o.zip, o.city, o.product_name, o.quantity,
-(o.total_cents / 100).toFixed(2).replace(".", ","), o.status
-]);
-const escape = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-return [headers, ...rows].map(r => r.map(escape).join(";")).join("\r\n");
+function downloadOrderExcel(o: any) {
+const rows: [string, string][] = [
+["Bestellnummer", o.order_number],
+["Kunde", o.customer_name],
+["E-Mail", o.email],
+["Telefon", o.phone],
+["Firma", o.company],
+["Adresse", o.address],
+["PLZ", o.zip],
+["Ort", o.city],
+["Produkt", o.product_name],
+["Menge", String(o.quantity)],
+["Summe", (o.total_cents / 100).toFixed(2).replace(".", ",") + " EUR"],
+["Status", o.status],
+];
+
+const escape = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+const csv = "\uFEFF" + rows.map(r => r.map(escape).join(";")).join("\r\n");
+const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+const url = URL.createObjectURL(blob);
+const a = document.createElement("a");
+a.href = url;
+a.download = `Bestellung_${o.order_number}.csv`;
+a.click();
+URL.revokeObjectURL(url);
 }
 
 export default function Admin({ initialProducts, initialOrders }: { initialProducts: any[]; initialOrders: any[] }) {
 const [products, setProducts] = useState(initialProducts);
 const [orders, setOrders] = useState(initialOrders);
 const [form, setForm] = useState({ name: "", sku: "", description: "", priceCents: 10400, securityLevel: 2 });
-const [selected, setSelected] = useState<any>(null);
 
 async function add() {
 const r = await fetch("/api/products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
@@ -37,16 +52,6 @@ async function removeOrder(id: number) {
 if (!confirm("Bestellung wirklich löschen?")) return;
 const r = await fetch("/api/admin/orders?id=" + id, { method: "DELETE" });
 if (r.ok) setOrders(o => o.filter(x => x.id !== id)); else alert((await r.json()).error);
-}
-function exportCSV() {
-const csv = "\uFEFF" + toCSV(orders);
-const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-const url = URL.createObjectURL(blob);
-const a = document.createElement("a");
-a.href = url;
-a.download = "bestellungen.csv";
-a.click();
-URL.revokeObjectURL(url);
 }
 
 return (
@@ -86,7 +91,6 @@ return (
 
 <section className="adminbox">
 <h2>Bestellungen</h2>
-<button className="btn gold" onClick={exportCSV} style={{ marginBottom: 12 }}>Als CSV exportieren</button>
 <div className="table">
 <table>
 <thead><tr><th>Nr.</th><th>Kunde</th><th>Summe</th><th>Status</th><th>Ändern</th><th>Löschen</th></tr></thead>
@@ -94,7 +98,7 @@ return (
 {orders.map(o => (
 <tr key={o.id}>
 <td>{o.order_number}</td>
-<td><a href="#" onClick={e => { e.preventDefault(); setSelected(o); }}>{o.customer_name}</a></td>
+<td><a href="#" onClick={e => { e.preventDefault(); downloadOrderExcel(o); }}>{o.customer_name}</a></td>
 <td>{eur(o.total_cents)}</td>
 <td>{o.status}</td>
 <td>
@@ -110,30 +114,6 @@ return (
 </div>
 </section>
 </div>
-
-{selected && (
-<div onClick={() => setSelected(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
-<div onClick={e => e.stopPropagation()} style={{ background: "#fff", padding: 24, borderRadius: 8, maxWidth: 480, width: "90%" }}>
-<h2>Bestellung {selected.order_number}</h2>
-<table style={{ width: "100%" }}>
-<tbody>
-<tr><td><b>Kunde</b></td><td>{selected.customer_name}</td></tr>
-<tr><td><b>E-Mail</b></td><td>{selected.email}</td></tr>
-<tr><td><b>Telefon</b></td><td>{selected.phone}</td></tr>
-<tr><td><b>Firma</b></td><td>{selected.company}</td></tr>
-<tr><td><b>Adresse</b></td><td>{selected.address}</td></tr>
-<tr><td><b>PLZ</b></td><td>{selected.zip}</td></tr>
-<tr><td><b>Ort</b></td><td>{selected.city}</td></tr>
-<tr><td><b>Produkt</b></td><td>{selected.product_name}</td></tr>
-<tr><td><b>Menge</b></td><td>{selected.quantity}</td></tr>
-<tr><td><b>Summe</b></td><td>{eur(selected.total_cents)}</td></tr>
-<tr><td><b>Status</b></td><td>{selected.status}</td></tr>
-</tbody>
-</table>
-<button className="btn light" style={{ marginTop: 16 }} onClick={() => setSelected(null)}>Schließen</button>
-</div>
-</div>
-)}
 </main>
 );
 }

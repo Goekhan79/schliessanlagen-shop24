@@ -14,7 +14,7 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
  const [selected,setSelected]=useState<Product>(products[0]);
  const [customer,setCustomer]=useState({name:"",email:"",phone:"",company:"",address:"",zip:"",city:""});
  const [message,setMessage]=useState("");
- const [gsSs,setGsSs]=useState<"GS"|"SS">("GS");
+ const [gsSs,setGsSs]=useState<"GS" | "SS">("GS");
 const anlagenart=useMemo(()=>{
   if(config.customerType==="private") return gsSs==="SS" ? "Sperrschließung (SS)" : "Gleichschließung (GS)";
   if(config.doors<=5) return "Zentralschloss-Anlage (Z)";

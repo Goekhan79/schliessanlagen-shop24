@@ -24,11 +24,18 @@ function downloadOrderExcel(o: any) {
     ["Kundentyp", config.customerType],
     ["Anlagenart", config.anlagenart],
     ["Schließungsart", config.gsSs],
-    ["Türen", String(config.doors ?? "")],
     ["Nutzer", String(config.users ?? "")],
     ["Schlüssel", String(config.keys ?? "")],
     ["Sicherheitsstufe", String(config.security ?? "")],
   ];
+
+  if (config.doorList) {
+    rows.push(["", ""]);
+    rows.push(["Türliste (Zylindertyp / Anzahl / Maß außen / Maß innen)", ""]);
+    config.doorList.forEach((d: any) => {
+      rows.push([d.name, `${d.type} / ${d.count}x / ${d.outerMM}mm außen / ${d.innerMM}mm innen`]);
+    });
+  }
 
   if (config.matrix && config.doors && config.roles) {
     rows.push(["", ""]);

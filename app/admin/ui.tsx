@@ -16,8 +16,7 @@ function downloadOrderExcel(o: any) {
     ["Adresse", o.address],
     ["PLZ", o.zip],
     ["Ort", o.city],
-    ["Produkt", o.product_name],
-    ["Menge", String(o.quantity)],
+   ...(o.items||[]).map((i:any,idx:number):[string,string]=>[`Produkt ${idx+1}`, `${i.name} (${i.quantity}x)`]),
     ["Summe", (o.total_cents / 100).toFixed(2).replace(".", ",") + " EUR"],
     ["Status", o.status],
     ["Projekt", config.project],
@@ -119,7 +118,7 @@ return (
 <h2>Bestellungen</h2>
 <div className="table">
 <table>
-<thead><tr><th>Nr.</th><th>Kunde</th><th>Summe</th><th>Status</th><th>Ändern</th><th>Löschen</th></tr></thead>
+<thead><tr><th>Nr.</th><th>Produkte</th><th>Kunde</th><th>Summe</th><th>Status</th><th>Ändern</th><th>Löschen</th></tr></thead>
 <tbody>
 {orders.map(o => (
 <tr key={o.id}>

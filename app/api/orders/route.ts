@@ -36,6 +36,7 @@ export async function POST(req: Request) {
 
     for (const item of items) {
       const product = foundProducts.find((p: any) => p.id === item.productId);
+if (!product) continue;
       await tx`INSERT INTO order_items (order_id, product_id, quantity, unit_price_cents)
         VALUES (${orderId}, ${item.productId}, ${item.quantity}, ${product.price_cents})`;
     }

@@ -124,6 +124,7 @@ return (
 {orders.map(o => (
 <tr key={o.id}>
 <td>{o.order_number}</td>
+<td>{(o.items||[]).map((i:any)=>`${i.quantity}x ${i.name}`).join(", ")}</td>
 <td><a href="#" onClick={e => { e.preventDefault(); downloadOrderExcel(o); }}>{o.customer_name}</a></td>
 <td>{eur(o.total_cents)}</td>
 <td>{o.status}</td>

@@ -31,10 +31,11 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
     {name:"Technikraum",type:"Vorhangschlossyzlinder",count:1,outerMM:25,innerMM:25},
   ]);
   const [matrix,setMatrix]=useState<boolean[][]>(doorList.map((_,i)=>roles.map((_,j)=>i===0||j===i)));
+  const [openDoor,setOpenDoor]=useState<number|null>(0);
   function toggleMatrix(i:number,j:number){setMatrix(m=>m.map((row,ri)=>ri===i?row.map((v,rj)=>rj===j?!v:v):row))}
   function updateDoor(i:number,field:keyof Door,value:string|number){setDoorList(d=>d.map((door,di)=>di===i?{...door,[field]:value}:door))}
-  function addDoor(){setDoorList(d=>[...d,{name:"Neue Tür",type:"Profilzylinder",count:1,outerMM:30,innerMM:35}]);setMatrix(m=>[...m,roles.map(()=>false)])}
-  function removeDoor(i:number){setDoorList(d=>d.filter((_,di)=>di!==i));setMatrix(m=>m.filter((_,mi)=>mi!==i))}
+  function addDoor(){setDoorList(d=>[...d,{name:"Neue Tür",type:"Profilzylinder",count:1,outerMM:30,innerMM:35}]);setMatrix(m=>[...m,roles.map(()=>false)]);setOpenDoor(doorList.length)}
+  function removeDoor(i:number){setDoorList(d=>d.filter((_,di)=>di!==i));setMatrix(m=>m.filter((_,mi)=>mi!==i));if(openDoor===i)setOpenDoor(null)}
   function update(k:keyof Config,v:number|string){setConfig(x=>({...x,[k]:v}))}
   async function order(){
     setMessage("Bestellung wird gespeichert ...");
@@ -53,22 +54,30 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
       <div className="steps">{["Projekt","Mengen","Schließplan","Bestellung"].map((x,i)=><div className={step===i+1?"on":""} key={x}>{i+1}. {x}</div>)}</div>
       {step===1&&<Panel title="Was möchten Sie planen?"><Choices value={config.project} onChange={v=>update("project",v)} items={[["new","Neues Projekt","Neue Schließanlage"],["existing","Bestehende Anlage","Erweiterung / Nachbestellung"]]}/><h3>Art des Projekts</h3><Choices value={config.customerType} onChange={v=>update("customerType",v)} items={[["business","Gewerbe","Büro, Objekt oder Hausverwaltung"],["private","Privat","Einfamilienhaus / Wohnung"]]}/>{config.customerType==="private" ? <div><h3>Schließungsart</h3><Choices value={gsSs} onChange={v=>setGsSs(v)} items={[["GS","Gleichschließung","Ein Schlüssel öffnet alle Türen, ohne Sicherungskarte"],["SS","Sperrschließung","Mit Sicherungskarte, sichere Nachbestellung"]]}/></div> : null}<div className="anlagenart-info"><b>Ihre Anlagenart: </b>{anlagenart}</div></Panel>}
       {step===2&&<Panel title="Mengen und Sicherheitsstufe"><div className="fields">{[["doors","Türen"],["users","Nutzer"],["keys","Schlüssel"]].map(([k,l])=><label key={k}>{l}<div className="counter"><button onClick={()=>update(k as keyof Config,Math.max(1,(config as any)[k]-1))}>-</button><b>{(config as any)[k]}</b><button onClick={()=>update(k as keyof Config,(config as any)[k]+1)}>+</button></div></label>)}</div><h3>Sicherheitsstufe</h3><Choices value={String(config.security)} onChange={v=>update("security",Number(v))} items={[["1","Standard","Basis"],["2","Hoch","Empfohlen"],["3","Maximal","Premium"]]}/></Panel>}
-      {step===3&&<Panel title="Schließplan"><p>Legen Sie für jede Tür Zylindertyp, Anzahl und Maße fest, sowie welche Nutzergruppe Zugang erhält.</p>
-        <div className="doorlist">{doorList.map((door,i)=>
-          <div className="doorcard" key={i}>
-            <div className="doorcard-head">
-              <input className="doorname" value={door.name} onChange={e=>updateDoor(i,"name",e.target.value)}/>
+      {step===3&&<Panel title="Schließplan"><p>Klicken Sie eine Tür an, um Zylindertyp, Maße und Berechtigungen festzulegen.</p>
+        <div className="doorlist">{doorList.map((door,i)=>{
+          const isOpen=openDoor===i;
+          const allowedCount=matrix[i]?.filter(Boolean).length||0;
+          return <div className={"doorcard "+(isOpen?"open":"")} key={i}>
+            <div className="doorcard-summary" onClick={()=>setOpenDoor(isOpen?null:i)}>
+              <span className="doorcard-arrow">{isOpen?"▾":"▸"}</span>
+              <span className="doorcard-name">{door.name}</span>
+              <span className="doorcard-meta">{door.type} · {door.count}x · {allowedCount} Nutzergruppen</span>
+            </div>
+            {isOpen&&<div className="doorcard-body">
+              <label>Bezeichnung<input value={door.name} onChange={e=>updateDoor(i,"name",e.target.value)}/></label>
+              <div className="doorcard-fields">
+                <label>Zylindertyp<select value={door.type} onChange={e=>updateDoor(i,"type",e.target.value)}>{cylinderTypes.map(t=><option key={t}>{t}</option>)}</select></label>
+                <label>Anzahl<input type="number" min={1} value={door.count} onChange={e=>updateDoor(i,"count",Number(e.target.value))}/></label>
+                <label>Maß außen (mm)<input type="number" min={0} value={door.outerMM} onChange={e=>updateDoor(i,"outerMM",Number(e.target.value))}/></label>
+                <label>Maß innen (mm)<input type="number" min={0} value={door.innerMM} onChange={e=>updateDoor(i,"innerMM",Number(e.target.value))}/></label>
+              </div>
+              <h4>Zugangsberechtigung</h4>
+              <div className="doorcard-matrix">{roles.map((r,j)=><label key={r} className="matrix-check"><input type="checkbox" checked={matrix[i]?.[j]||false} onChange={()=>toggleMatrix(i,j)}/>{r}</label>)}</div>
               <button className="btn light small" onClick={()=>removeDoor(i)}>Tür entfernen</button>
-            </div>
-            <div className="doorcard-fields">
-              <label>Zylindertyp<select value={door.type} onChange={e=>updateDoor(i,"type",e.target.value)}>{cylinderTypes.map(t=><option key={t}>{t}</option>)}</select></label>
-              <label>Anzahl<input type="number" min={1} value={door.count} onChange={e=>updateDoor(i,"count",Number(e.target.value))}/></label>
-              <label>Maß außen (mm)<input type="number" min={0} value={door.outerMM} onChange={e=>updateDoor(i,"outerMM",Number(e.target.value))}/></label>
-              <label>Maß innen (mm)<input type="number" min={0} value={door.innerMM} onChange={e=>updateDoor(i,"innerMM",Number(e.target.value))}/></label>
-            </div>
-            <div className="doorcard-matrix">{roles.map((r,j)=><label key={r} className="matrix-check"><input type="checkbox" checked={matrix[i]?.[j]||false} onChange={()=>toggleMatrix(i,j)}/>{r}</label>)}</div>
+            </div>}
           </div>
-        )}</div>
+        })}</div>
         <button className="btn gold" onClick={addDoor}>+ Weitere Tür hinzufügen</button>
       </Panel>}
       {step===4&&<Panel title="Bestellung abschließen"><div className="orderGrid"><div><h3>{selected.name}</h3><p>{config.doors} Türen - {config.users} Nutzer - {config.keys} Schlüssel</p><div className="price">{eur(price)}</div><h3>Kundendaten</h3><div className="form">{Object.entries({name:"Name *",email:"E-Mail *",phone:"Telefon",company:"Firma",address:"Straße & Hausnummer *",zip:"PLZ *",city:"Ort *"}).map(([k,l])=><label key={k}>{l}<input value={(customer as any)[k]} onChange={e=>setCustomer(x=>({...x,[k]:e.target.value}))}/></label>)}</div></div><aside><h3>Zusammenfassung</h3><p>System<br/><b>{selected.name}</b></p><p>Geschätzter Preis<br/><b>{eur(price)}</b></p><button className="btn gold full" onClick={order}>Kostenpflichtig bestellen</button>{message ? <div className="message">{message}</div> : null}<small>Demo: Für einen Livegang müssen Zahlungsanbieter, E-Mail-Versand und rechtliche Checkout-Texte ergänzt werden.</small></aside></div></Panel>}

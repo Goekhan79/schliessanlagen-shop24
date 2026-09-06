@@ -1,4 +1,4 @@
-// trigger redeploy
+// trigger redeploy 2
 import { NextResponse } from "next/server";
 import sql from "@/lib/db";
 

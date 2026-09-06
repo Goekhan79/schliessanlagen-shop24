@@ -23,7 +23,7 @@ function downloadOrderExcel(o: any) {
     ["Projekt", config.project],
     ["Kundentyp", config.customerType],
     ["Anlagenart", config.anlagenart],
-    ["Schließungsart", config.gsSs],
+    ["Schließungsart", config.customerType==="private" ? config.gsSs : "–"],
     ["Nutzer", String(config.users ?? "")],
     ["Schlüssel", String(config.keys ?? "")],
     ["Sicherheitsstufe", String(config.security ?? "")],

@@ -4,48 +4,50 @@ import { useState } from "react";
 const eur = (c: number) => c.toLocaleString("de-DE", { style: "currency", currency: "EUR" });
 
 function downloadOrderExcel(o: any) {
-let config: any = {};
-try { config = JSON.parse(o.configuration_json || "{}"); } catch {}
+  let config: any = {};
+  try { config = JSON.parse(o.configuration_json || "{}"); } catch {}
 
-const rows: [string, string][] = [
-["Bestellnummer", o.order_number],
-["Kunde", o.customer_name],
-["E-Mail", o.email],
-["Telefon", o.phone],
-["Firma", o.company],
-["Adresse", o.address],
-["PLZ", o.zip],
-["Ort", o.city],
-["Produkt", o.product_name],
-["Menge", String(o.quantity)],
-["Summe", (o.total_cents / 100).toFixed(2).replace(".", ",") + " EUR"],
-["Status", o.status],
-["Projekt", config.project],
-["Kundentyp", config.customerType],
-["Türen", String(config.doors ?? "")],
-["Nutzer", String(config.users ?? "")],
-["Schlüssel", String(config.keys ?? "")],
-["Sicherheitsstufe", String(config.security ?? "")],
-];
+  const rows: [string, string][] = [
+    ["Bestellnummer", o.order_number],
+    ["Kunde", o.customer_name],
+    ["E-Mail", o.email],
+    ["Telefon", o.phone],
+    ["Firma", o.company],
+    ["Adresse", o.address],
+    ["PLZ", o.zip],
+    ["Ort", o.city],
+    ["Produkt", o.product_name],
+    ["Menge", String(o.quantity)],
+    ["Summe", (o.total_cents / 100).toFixed(2).replace(".", ",") + " EUR"],
+    ["Status", o.status],
+    ["Projekt", config.project],
+    ["Kundentyp", config.customerType],
+    ["Anlagenart", config.anlagenart],
+    ["Schließungsart", config.gsSs],
+    ["Türen", String(config.doors ?? "")],
+    ["Nutzer", String(config.users ?? "")],
+    ["Schlüssel", String(config.keys ?? "")],
+    ["Sicherheitsstufe", String(config.security ?? "")],
+  ];
 
-if (config.matrix && config.doors && config.roles) {
-rows.push(["", ""]);
-rows.push(["Berechtigungsmatrix", ""]);
-config.doors.forEach((door: string, i: number) => {
-const allowed = config.roles.filter((_: string, j: number) => config.matrix[i]?.[j]);
-rows.push([door, allowed.join(", ") || "-"]);
-});
-}
+  if (config.matrix && config.doors && config.roles) {
+    rows.push(["", ""]);
+    rows.push(["Berechtigungsmatrix", ""]);
+    config.doors.forEach((door: string, i: number) => {
+      const allowed = config.roles.filter((_: string, j: number) => config.matrix[i]?.[j]);
+      rows.push([door, allowed.join(", ") || "-"]);
+    });
+  }
 
-const escape = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-const csv = "\uFEFF" + rows.map(r => r.map(escape).join(";")).join("\r\n");
-const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-const url = URL.createObjectURL(blob);
-const a = document.createElement("a");
-a.href = url;
-a.download = `Bestellung_${o.order_number}.csv`;
-a.click();
-URL.revokeObjectURL(url);
+  const escape = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = "\uFEFF" + rows.map(r => r.map(escape).join(";")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Bestellung_${o.order_number}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 export default function Admin({ initialProducts, initialOrders }: { initialProducts: any[]; initialOrders: any[] }) {
 const [products, setProducts] = useState(initialProducts);

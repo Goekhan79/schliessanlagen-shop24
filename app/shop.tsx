@@ -23,7 +23,10 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
     return "Generalhauptschlüssel-Anlage (GHS)";
   },[config.customerType,config.doors,gsSs]);
   const price=useMemo(()=>selected ? selected.price_cents*config.doors/100 + config.keys*12 + config.users*18 + 180 : 0,[selected,config]);
-  const roles=["Geschäftsführung","Büro","Lager","Technik"];
+  const [roles,setRoles]=useState(["Geschäftsführung","Büro","Lager","Technik"]);
+function updateRole(j:number,name:string){setRoles(r=>r.map((x,i)=>i===j?name:x))}
+function addRole(){setRoles(r=>[...r,"Neue Gruppe"]);setMatrix(m=>m.map(row=>[...row,false]))}
+function removeRole(j:number){setRoles(r=>r.filter((_,i)=>i!==j));setMatrix(m=>m.map(row=>row.filter((_,i)=>i!==j)))}
   const [doorList,setDoorList]=useState<Door[]>([
     {name:"Haupteingang",type:"Profilzylinder",count:1,outerMM:30,innerMM:35},
     {name:"Büro 1",type:"Profilzylinder",count:1,outerMM:30,innerMM:35},
@@ -55,6 +58,14 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
       {step===1&&<Panel title="Was möchten Sie planen?"><Choices value={config.project} onChange={v=>update("project",v)} items={[["new","Neues Projekt","Neue Schließanlage"],["existing","Bestehende Anlage","Erweiterung / Nachbestellung"]]}/><h3>Art des Projekts</h3><Choices value={config.customerType} onChange={v=>update("customerType",v)} items={[["business","Gewerbe","Büro, Objekt oder Hausverwaltung"],["private","Privat","Einfamilienhaus / Wohnung"]]}/>{config.customerType==="private" ? <div><h3>Schließungsart</h3><Choices value={gsSs} onChange={v=>setGsSs(v)} items={[["GS","Gleichschließung","Ein Schlüssel öffnet alle Türen, ohne Sicherungskarte"],["SS","Sperrschließung","Mit Sicherungskarte, sichere Nachbestellung"]]}/></div> : null}<div className="anlagenart-info"><b>Ihre Anlagenart: </b>{anlagenart}</div></Panel>}
       {step===2&&<Panel title="Mengen und Sicherheitsstufe"><div className="fields">{[["doors","Türen"],["users","Nutzer"],["keys","Schlüssel"]].map(([k,l])=><label key={k}>{l}<div className="counter"><button onClick={()=>update(k as keyof Config,Math.max(1,(config as any)[k]-1))}>-</button><b>{(config as any)[k]}</b><button onClick={()=>update(k as keyof Config,(config as any)[k]+1)}>+</button></div></label>)}</div><h3>Sicherheitsstufe</h3><Choices value={String(config.security)} onChange={v=>update("security",Number(v))} items={[["1","Standard","Basis"],["2","Hoch","Empfohlen"],["3","Maximal","Premium"]]}/></Panel>}
       {step===3&&<Panel title="Schließplan"><p>Klicken Sie eine Tür an, um Zylindertyp, Maße und Berechtigungen festzulegen.</p>
+        <h3>Nutzergruppen</h3>
+        <div className="rolelist">{roles.map((r,j)=>
+          <div className="role-edit" key={j}>
+            <input value={r} onChange={e=>updateRole(j,e.target.value)}/>
+            <button className="btn light small" onClick={()=>removeRole(j)}>Entfernen</button>
+          </div>
+        )}</div>
+        <button className="btn light small" onClick={addRole}>+ Nutzergruppe hinzufügen</button>
         <div className="doorlist">{doorList.map((door,i)=>{
           const isOpen=openDoor===i;
           const allowedCount=matrix[i]?.filter(Boolean).length||0;

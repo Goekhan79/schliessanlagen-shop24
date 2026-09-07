@@ -2,17 +2,44 @@
 import { useMemo, useState } from "react";
 
 type Product = {id:number; name:string; sku:string; description:string; price_cents:number; security_level:number};
-type Config = {project:string; customerType:string; doors:number; users:number; keys:number; security:number};
-type Door = {name:string; type:string; count:number; outerMM:number; innerMM:number};
+type Config = {project:string; customerType:string; buildingType:string; doors:number; users:number; keys:number; security:number};
+type Door = {name:string; type:string; size:string; count:number; bohrschutz:string; kernziehschutz:boolean; ng:boolean};
 type CartItem = {product:Product; quantity:number};
 
 const eur=(c:number)=>c.toLocaleString("de-DE",{style:"currency",currency:"EUR"});
-const cylinderTypes=["Profilzylinder","Knaufzylinder","Halbzylinder","Vorhangschlossyzlinder","Möbelzylinder"];
+
+const cylinderTypes=[
+  {code:"DZ",name:"Doppelzylinder",desc:"Von beiden Seiten mit Schlüssel bedienbar. Die übliche Wahl für Wohnungs- und Haustüren.",sizes:["27/27 mm","30/30 mm","30/35 mm","35/35 mm","30/40 mm","40/40 mm","30/50 mm"]},
+  {code:"HZ",name:"Halbzylinder",desc:"Nur von außen mit Schlüssel bedienbar, innen kein Schlüsselloch. Typisch für Keller- oder Nebentüren.",sizes:["27/10 mm","30/10 mm","35/10 mm","40/10 mm"]},
+  {code:"KZ",name:"Knaufzylinder",desc:"Innenseite hat einen Drehknauf statt Schlüsselloch – praktisch, um schnell ohne Schlüssel von innen zu öffnen.",sizes:["27/27 mm","30/30 mm","30/35 mm","35/35 mm"]},
+  {code:"RZ",name:"Rundzylinder",desc:"Runde statt ovale Bauform, wird bei bestimmten Türsystemen benötigt.",sizes:["29/29 mm","30/30 mm","35/35 mm"]},
+  {code:"AZ",name:"Außenzylinder",desc:"Für den Einsatz mit einem zusätzlichen Kastenschloss an der Tür.",sizes:["30/35 mm"]},
+  {code:"BZ",name:"Blindzylinder",desc:"Wird bei Feuerschutztüren verwendet, wo keine Durchsteckfunktion nötig ist. Maße auf Anfrage.",sizes:["auf Anfrage"]},
+  {code:"HeZ",name:"Hebelzylinder",desc:"Für Briefkästen. Der Durchmesser muss zum vorhandenen Kastenloch passen.",sizes:["Standardmaß"]},
+  {code:"VHS",name:"Vorhängeschloss",desc:"Die Zahl gibt die Bügelhöhe in Millimetern an.",sizes:["25 mm Bügelhöhe","30 mm Bügelhöhe","35 mm Bügelhöhe","45 mm Bügelhöhe","50 mm Bügelhöhe","55 mm Bügelhöhe"]},
+];
+const cylinderByCode=Object.fromEntries(cylinderTypes.map(c=>[c.code,c]));
+
+const bohrschutzLevels=[
+  {code:"none",label:"Kein Bohrschutz"},
+  {code:"BS1",label:"BS1 – 2 gehärtete Stahlstifte"},
+  {code:"BS2",label:"BS2 – 3 Hartmetallstifte + Schutzplatte"},
+  {code:"BS3",label:"BS3 – Bohr- und Ziehschutz, Stufe A"},
+  {code:"BS4",label:"BS4 – Bohr- und Ziehschutz, Stufe B (höchste Stufe)"},
+];
+
+function InfoIcon({text}:{text:string}){
+  const [open,setOpen]=useState(false);
+  return <span className="info-icon" onClick={()=>setOpen(o=>!o)}>
+    ⓘ
+    {open && <span className="info-tip">{text}<button onClick={(e)=>{e.stopPropagation();setOpen(false)}}>Schließen</button></span>}
+  </span>;
+}
 
 export default function Shop({initialProducts}:{initialProducts:Product[]}) {
   const [products] = useState(initialProducts);
   const [step,setStep]=useState(1);
-  const [config,setConfig]=useState<Config>({project:"new",customerType:"business",doors:12,users:8,keys:20,security:2});
+  const [config,setConfig]=useState<Config>({project:"new",customerType:"business",buildingType:"",doors:12,users:8,keys:20,security:2});
   const [cart,setCart]=useState<CartItem[]>([]);
   const [customer,setCustomer]=useState({name:"",email:"",phone:"",company:"",address:"",zip:"",city:""});
   const [message,setMessage]=useState("");
@@ -25,21 +52,34 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
   },[config.customerType,config.doors,gsSs]);
   const itemsTotal=useMemo(()=>cart.reduce((s,i)=>s+i.product.price_cents*config.doors/100*i.quantity,0),[cart,config.doors]);
   const price=useMemo(()=>itemsTotal + config.keys*12 + config.users*18 + 180,[itemsTotal,config]);
-  const [roles,setRoles]=useState(["Geschäftsführung","Büro","Lager","Technik"]);
-  function updateRole(j:number,name:string){setRoles(r=>r.map((x,i)=>i===j?name:x))}
-  function addRole(){setRoles(r=>[...r,"Neue Gruppe"]);setMatrix(m=>m.map(row=>[...row,false]))}
-  function removeRole(j:number){setRoles(r=>r.filter((_,i)=>i!==j));setMatrix(m=>m.map(row=>row.filter((_,i)=>i!==j)))}
+
   const [doorList,setDoorList]=useState<Door[]>([
-    {name:"Haupteingang",type:"Profilzylinder",count:1,outerMM:30,innerMM:35},
-    {name:"Büro 1",type:"Profilzylinder",count:1,outerMM:30,innerMM:35},
-    {name:"Lager",type:"Halbzylinder",count:1,outerMM:35,innerMM:0},
-    {name:"Technikraum",type:"Vorhangschlossyzlinder",count:1,outerMM:25,innerMM:25},
+    {name:"Haupteingang",type:"DZ",size:"30/35 mm",count:1,bohrschutz:"BS2",kernziehschutz:false,ng:false},
+    {name:"Büro 1",type:"DZ",size:"30/35 mm",count:1,bohrschutz:"none",kernziehschutz:false,ng:false},
+    {name:"Lager",type:"HZ",size:"35/10 mm",count:1,bohrschutz:"none",kernziehschutz:false,ng:false},
+    {name:"Technikraum",type:"VHS",size:"30 mm Bügelhöhe",count:1,bohrschutz:"none",kernziehschutz:false,ng:false},
   ]);
-  const [matrix,setMatrix]=useState<boolean[][]>(doorList.map((_,i)=>roles.map((_,j)=>i===0||j===i)));
+  const [keyList,setKeyList]=useState(["Schlüssel 1","Schlüssel 2"]);
+  const [matrix,setMatrix]=useState<boolean[][]>(doorList.map((_,i)=>keyList.map((_,j)=>true)));
   const [openDoor,setOpenDoor]=useState<number|null>(0);
+
+  function updateKey(j:number,name:string){setKeyList(k=>k.map((x,i)=>i===j?name:x))}
+  function addKey(){setKeyList(k=>[...k,`Schlüssel ${k.length+1}`]);setMatrix(m=>m.map(row=>[...row,false]))}
+  function removeKey(j:number){setKeyList(k=>k.filter((_,i)=>i!==j));setMatrix(m=>m.map(row=>row.filter((_,i)=>i!==j)))}
   function toggleMatrix(i:number,j:number){setMatrix(m=>m.map((row,ri)=>ri===i?row.map((v,rj)=>rj===j?!v:v):row))}
-  function updateDoor(i:number,field:keyof Door,value:string|number){setDoorList(d=>d.map((door,di)=>di===i?{...door,[field]:value}:door))}
-  function addDoor(){setDoorList(d=>[...d,{name:"Neue Tür",type:"Profilzylinder",count:1,outerMM:30,innerMM:35}]);setMatrix(m=>[...m,roles.map(()=>false)]);setOpenDoor(doorList.length)}
+
+  function updateDoor(i:number,field:keyof Door,value:string|number|boolean){setDoorList(d=>d.map((door,di)=>{
+    if(di!==i) return door;
+    const updated={...door,[field]:value} as Door;
+    if(field==="type") updated.size=cylinderByCode[value as string].sizes[0];
+    if(field==="type" && value!=="DZ") updated.ng=false;
+    return updated;
+  }))}
+  function addDoor(){
+    setDoorList(d=>[...d,{name:"Neue Tür",type:"DZ",size:cylinderByCode["DZ"].sizes[0],count:1,bohrschutz:"none",kernziehschutz:false,ng:false}]);
+    setMatrix(m=>[...m,keyList.map(()=>false)]);
+    setOpenDoor(doorList.length);
+  }
   function removeDoor(i:number){setDoorList(d=>d.filter((_,di)=>di!==i));setMatrix(m=>m.filter((_,mi)=>mi!==i));if(openDoor===i)setOpenDoor(null)}
   function update(k:keyof Config,v:number|string){setConfig(x=>({...x,[k]:v}))}
 
@@ -62,7 +102,7 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
     const doors=doorList.map(d=>d.name);
     const items=cart.map(i=>({productId:i.product.id, quantity:i.quantity}));
     const res=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-      customer, configuration:{...config,matrix,doors,roles,anlagenart,gsSs,doorList}, totalCents:Math.round(price), items
+      customer, configuration:{...config,matrix,doors,keyList,anlagenart,gsSs,doorList}, totalCents:Math.round(price), items
     })});
     const data=await res.json();
     setMessage(res.ok?("Bestellung erfolgreich angelegt: "+data.orderNumber):(data.error||"Fehler"));
@@ -90,36 +130,56 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
     </section>
     <section id="konfigurator" className="section config"><div className="wrap"><div className="center"><small>KONFIGURATOR</small><h2>Ihre Schließanlage</h2></div>
       <div className="steps">{["Projekt","Mengen","Schließplan","Bestellung"].map((x,i)=><div className={step===i+1?"on":""} key={x}>{i+1}. {x}</div>)}</div>
-      {step===1&&<Panel title="Was möchten Sie planen?"><Choices value={config.project} onChange={v=>update("project",v)} items={[["new","Neues Projekt","Neue Schließanlage"],["existing","Bestehende Anlage","Erweiterung / Nachbestellung"]]}/><h3>Art des Projekts</h3><Choices value={config.customerType} onChange={v=>update("customerType",v)} items={[["business","Gewerbe","Büro, Objekt oder Hausverwaltung"],["private","Privat","Einfamilienhaus / Wohnung"]]}/>{config.customerType==="private" ? <div><h3>Schließungsart</h3><Choices value={gsSs} onChange={v=>setGsSs(v)} items={[["GS","Gleichschließung","Ein Schlüssel öffnet alle Türen, ohne Sicherungskarte"],["SS","Sperrschließung","Mit Sicherungskarte, sichere Nachbestellung"]]}/></div> : null}<div className="anlagenart-info"><b>Ihre Anlagenart: </b>{anlagenart}</div></Panel>}
+      {step===1&&<Panel title="Was möchten Sie planen?">
+        <Choices value={config.project} onChange={v=>update("project",v)} items={[["new","Neues Projekt","Neue Schließanlage"],["existing","Bestehende Anlage","Erweiterung / Nachbestellung"]]}/>
+        <h3>Art des Projekts</h3>
+        <Choices value={config.customerType} onChange={v=>update("customerType",v)} items={[["business","Gewerbe","Büro, Objekt oder Hausverwaltung"],["private","Privat","Einfamilienhaus / Wohnung"]]}/>
+        <h3>Gebäudeart</h3>
+        <Choices value={config.buildingType} onChange={v=>update("buildingType",v)} items={[["efh","Einfamilienhaus","Ein Haushalt"],["mfh","Mehrfamilienhaus","Mehrere Wohneinheiten"],["office","Büro","Bürogebäude / Praxis"],["commercial","Gewerbe","Lager, Produktion, Handel"]]}/>
+        {config.customerType==="private" ? <div><h3>Schließungsart</h3><Choices value={gsSs} onChange={v=>setGsSs(v)} items={[["GS","Gleichschließung","Ein Schlüssel öffnet alle Türen, ohne Sicherungskarte"],["SS","Sperrschließung","Mit Sicherungskarte, sichere Nachbestellung"]]}/></div> : null}
+        <div className="anlagenart-info"><b>Ihre Anlagenart: </b>{anlagenart}</div>
+      </Panel>}
       {step===2&&<Panel title="Mengen und Sicherheitsstufe"><div className="fields">{[["doors","Türen"],["users","Nutzer"],["keys","Schlüssel"]].map(([k,l])=><label key={k}>{l}<div className="counter"><button onClick={()=>update(k as keyof Config,Math.max(1,(config as any)[k]-1))}>-</button><b>{(config as any)[k]}</b><button onClick={()=>update(k as keyof Config,(config as any)[k]+1)}>+</button></div></label>)}</div><h3>Sicherheitsstufe</h3><Choices value={String(config.security)} onChange={v=>update("security",Number(v))} items={[["1","Standard","Basis"],["2","Hoch","Empfohlen"],["3","Maximal","Premium"]]}/></Panel>}
-      {step===3&&<Panel title="Schließplan"><p>Klicken Sie eine Tür an, um Zylindertyp, Maße und Berechtigungen festzulegen.</p>
-        <h3>Nutzergruppen</h3>
-        <div className="rolelist">{roles.map((r,j)=>
+      {step===3&&<Panel title="Schließplan">
+        <p>Legen Sie pro Tür Zylindertyp, Maß und Sicherheitsoptionen fest, und tragen Sie ein, welcher Schlüssel welche Tür öffnen soll.</p>
+
+        <h3>Schlüssel <InfoIcon text="Jeder Schlüssel bekommt einen Namen. In der Tabelle weiter unten legen Sie fest, welche Tür dieser Schlüssel öffnen darf."/></h3>
+        <div className="rolelist">{keyList.map((k,j)=>
           <div className="role-edit" key={j}>
-            <input value={r} onChange={e=>updateRole(j,e.target.value)}/>
-            <button className="btn light small" onClick={()=>removeRole(j)}>Entfernen</button>
+            <input value={k} onChange={e=>updateKey(j,e.target.value)}/>
+            <button className="btn light small" onClick={()=>removeKey(j)}>Entfernen</button>
           </div>
         )}</div>
-        <button className="btn light small" onClick={addRole}>+ Nutzergruppe hinzufügen</button>
+        <button className="btn light small" onClick={addKey}>+ Schlüssel hinzufügen</button>
+
         <div className="doorlist">{doorList.map((door,i)=>{
           const isOpen=openDoor===i;
           const allowedCount=matrix[i]?.filter(Boolean).length||0;
+          const cyl=cylinderByCode[door.type];
           return <div className={"doorcard "+(isOpen?"open":"")} key={i}>
             <div className="doorcard-summary" onClick={()=>setOpenDoor(isOpen?null:i)}>
               <span className="doorcard-arrow">{isOpen?"▾":"▸"}</span>
               <span className="doorcard-name">{door.name}</span>
-              <span className="doorcard-meta">{door.type} · {door.count}x · {allowedCount} Nutzergruppen</span>
+              <span className="doorcard-meta">{cyl.name} · {door.size} · {allowedCount} Schlüssel</span>
             </div>
             {isOpen&&<div className="doorcard-body">
               <label>Bezeichnung<input value={door.name} onChange={e=>updateDoor(i,"name",e.target.value)}/></label>
-              <div className="doorcard-fields">
-                <label>Zylindertyp<select value={door.type} onChange={e=>updateDoor(i,"type",e.target.value)}>{cylinderTypes.map(t=><option key={t}>{t}</option>)}</select></label>
-                <label>Anzahl<input type="number" min={1} value={door.count} onChange={e=>updateDoor(i,"count",Number(e.target.value))}/></label>
-                <label>Maß außen (mm)<input type="number" min={0} value={door.outerMM} onChange={e=>updateDoor(i,"outerMM",Number(e.target.value))}/></label>
-                <label>Maß innen (mm)<input type="number" min={0} value={door.innerMM} onChange={e=>updateDoor(i,"innerMM",Number(e.target.value))}/></label>
-              </div>
-              <h4>Zugangsberechtigung</h4>
-              <div className="doorcard-matrix">{roles.map((r,j)=><label key={r} className="matrix-check"><input type="checkbox" checked={matrix[i]?.[j]||false} onChange={()=>toggleMatrix(i,j)}/>{r}</label>)}</div>
+
+              <label>Zylindertyp <InfoIcon text={cyl.desc}/>
+                <select value={door.type} onChange={e=>updateDoor(i,"type",e.target.value)}>
+                  {cylinderTypes.map(t=><option key={t.code} value={t.code}>{t.name} ({t.code})</option>)}
+                </select>
+              </label>
+              <label>Standardmaß<select value={door.size} onChange={e=>updateDoor(i,"size",e.target.value)}>{cyl.sizes.map(s=><option key={s}>{s}</option>)}</select></label>
+              <label>Anzahl<input type="number" min={1} value={door.count} onChange={e=>updateDoor(i,"count",Number(e.target.value))}/></label>
+
+              <h4>Sicherheitsoptionen <InfoIcon text="Bohrschutz erschwert das gewaltsame Öffnen durch Aufbohren. Kernziehschutz verhindert das Herausziehen des Zylinderkerns. Die Not-/Gefahrenfunktion erlaubt das Aufschließen von außen, auch wenn innen ein Schlüssel steckt."/></h4>
+              <label>Bohrschutz<select value={door.bohrschutz} onChange={e=>updateDoor(i,"bohrschutz",e.target.value)}>{bohrschutzLevels.map(b=><option key={b.code} value={b.code}>{b.label}</option>)}</select></label>
+              <label className="checkbox-inline"><input type="checkbox" checked={door.kernziehschutz} onChange={e=>updateDoor(i,"kernziehschutz",e.target.checked)}/> Kernziehschutz</label>
+              {door.type==="DZ" && <label className="checkbox-inline"><input type="checkbox" checked={door.ng} onChange={e=>updateDoor(i,"ng",e.target.checked)}/> Not-/Gefahrenfunktion</label>}
+
+              <h4>Welche Schlüssel öffnen diese Tür?</h4>
+              <div className="doorcard-matrix">{keyList.map((k,j)=><label key={k} className="matrix-check"><input type="checkbox" checked={matrix[i]?.[j]||false} onChange={()=>toggleMatrix(i,j)}/>{k}</label>)}</div>
               <button className="btn light small" onClick={()=>removeDoor(i)}>Tür entfernen</button>
             </div>}
           </div>

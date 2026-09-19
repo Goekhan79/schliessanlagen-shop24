@@ -3,20 +3,24 @@ import { useMemo, useState } from "react";
 
 type Product = {id:number; name:string; sku:string; description:string; price_cents:number; security_level:number};
 type Config = {project:string; customerType:string; buildingType:string; doors:number; users:number; keys:number; security:number};
-type Door = {name:string; type:string; size:string; count:number; bohrschutz:string; kernziehschutz:boolean; ng:boolean};
+type Door = {
+  name:string; type:string; outerMM:number; innerMM:number; count:number;
+  bohrschutz:string; kernziehschutz:boolean; ng:boolean;
+  freilauf:boolean; zahnrad:string; farbkappe:boolean; farbe:string;
+};
 type CartItem = {product:Product; quantity:number};
 
 const eur=(c:number)=>c.toLocaleString("de-DE",{style:"currency",currency:"EUR"});
 
 const cylinderTypes=[
-  {code:"DZ",name:"Doppelzylinder",desc:"Von beiden Seiten mit Schlüssel bedienbar. Die übliche Wahl für Wohnungs- und Haustüren.",sizes:["27/27 mm","30/30 mm","30/35 mm","35/35 mm","30/40 mm","40/40 mm","30/50 mm"]},
-  {code:"HZ",name:"Halbzylinder",desc:"Nur von außen mit Schlüssel bedienbar, innen kein Schlüsselloch. Typisch für Keller- oder Nebentüren.",sizes:["27/10 mm","30/10 mm","35/10 mm","40/10 mm"]},
-  {code:"KZ",name:"Knaufzylinder",desc:"Innenseite hat einen Drehknauf statt Schlüsselloch – praktisch, um schnell ohne Schlüssel von innen zu öffnen.",sizes:["27/27 mm","30/30 mm","30/35 mm","35/35 mm"]},
-  {code:"RZ",name:"Rundzylinder",desc:"Runde statt ovale Bauform, wird bei bestimmten Türsystemen benötigt.",sizes:["29/29 mm","30/30 mm","35/35 mm"]},
-  {code:"AZ",name:"Außenzylinder",desc:"Für den Einsatz mit einem zusätzlichen Kastenschloss an der Tür.",sizes:["30/35 mm"]},
-  {code:"BZ",name:"Blindzylinder",desc:"Wird bei Feuerschutztüren verwendet, wo keine Durchsteckfunktion nötig ist. Maße auf Anfrage.",sizes:["auf Anfrage"]},
-  {code:"HeZ",name:"Hebelzylinder",desc:"Für Briefkästen. Der Durchmesser muss zum vorhandenen Kastenloch passen.",sizes:["Standardmaß"]},
-  {code:"VHS",name:"Vorhängeschloss",desc:"Die Zahl gibt die Bügelhöhe in Millimetern an.",sizes:["25 mm Bügelhöhe","30 mm Bügelhöhe","35 mm Bügelhöhe","45 mm Bügelhöhe","50 mm Bügelhöhe","55 mm Bügelhöhe"]},
+  {code:"DZ",name:"Doppelzylinder",desc:"Von beiden Seiten mit Schlüssel bedienbar. Die übliche Wahl für Wohnungs- und Haustüren."},
+  {code:"HZ",name:"Halbzylinder",desc:"Nur von außen mit Schlüssel bedienbar, innen kein Schlüsselloch. Typisch für Keller- oder Nebentüren."},
+  {code:"KZ",name:"Knaufzylinder",desc:"Innenseite hat einen Drehknauf statt Schlüsselloch – praktisch, um schnell ohne Schlüssel von innen zu öffnen."},
+  {code:"RZ",name:"Rundzylinder",desc:"Runde statt ovale Bauform, wird bei bestimmten Türsystemen benötigt."},
+  {code:"AZ",name:"Außenzylinder",desc:"Für den Einsatz mit einem zusätzlichen Kastenschloss an der Tür."},
+  {code:"BZ",name:"Blindzylinder",desc:"Wird bei Feuerschutztüren verwendet, wo keine Durchsteckfunktion nötig ist. Maße auf Anfrage."},
+  {code:"HeZ",name:"Hebelzylinder",desc:"Für Briefkästen. Der Durchmesser muss zum vorhandenen Kastenloch passen."},
+  {code:"VHS",name:"Vorhängeschloss",desc:"Statt Außen-/Innenmaß geben Sie hier die Bügelhöhe in mm im Feld \"Außen\" ein."},
 ];
 const cylinderByCode=Object.fromEntries(cylinderTypes.map(c=>[c.code,c]));
 
@@ -27,6 +31,13 @@ const bohrschutzLevels=[
   {code:"BS3",label:"BS3 – Bohr- und Ziehschutz, Stufe A"},
   {code:"BS4",label:"BS4 – Bohr- und Ziehschutz, Stufe B (höchste Stufe)"},
 ];
+const zahnradLevels=[
+  {code:"none",label:"Ohne Zahnrad-Schließbart"},
+  {code:"ZR10",label:"ZR10 – 10 Zähne (Multi-Lock)"},
+  {code:"ZR14",label:"ZR14 – 14 Zähne"},
+  {code:"ZR18",label:"ZR18 – 18 Zähne (Multi-Lock)"},
+];
+const zylinderfarben=["Silber (Standard)","Messing","Schwarz","Vernickelt","Edelstahloptik"];
 
 function InfoIcon({text}:{text:string}){
   const [open,setOpen]=useState(false);
@@ -54,10 +65,10 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
   const price=useMemo(()=>itemsTotal + config.keys*12 + config.users*18 + 180,[itemsTotal,config]);
 
   const [doorList,setDoorList]=useState<Door[]>([
-    {name:"Haupteingang",type:"DZ",size:"30/35 mm",count:1,bohrschutz:"BS2",kernziehschutz:false,ng:false},
-    {name:"Büro 1",type:"DZ",size:"30/35 mm",count:1,bohrschutz:"none",kernziehschutz:false,ng:false},
-    {name:"Lager",type:"HZ",size:"35/10 mm",count:1,bohrschutz:"none",kernziehschutz:false,ng:false},
-    {name:"Technikraum",type:"VHS",size:"30 mm Bügelhöhe",count:1,bohrschutz:"none",kernziehschutz:false,ng:false},
+    {name:"Haupteingang",type:"DZ",outerMM:40,innerMM:45,count:1,bohrschutz:"BS2",kernziehschutz:false,ng:false,freilauf:false,zahnrad:"none",farbkappe:false,farbe:zylinderfarben[0]},
+    {name:"Büro 1",type:"DZ",outerMM:30,innerMM:35,count:1,bohrschutz:"none",kernziehschutz:false,ng:false,freilauf:false,zahnrad:"none",farbkappe:false,farbe:zylinderfarben[0]},
+    {name:"Lager",type:"HZ",outerMM:35,innerMM:0,count:1,bohrschutz:"none",kernziehschutz:false,ng:false,freilauf:false,zahnrad:"none",farbkappe:false,farbe:zylinderfarben[0]},
+    {name:"Technikraum",type:"VHS",outerMM:30,innerMM:0,count:1,bohrschutz:"none",kernziehschutz:false,ng:false,freilauf:false,zahnrad:"none",farbkappe:false,farbe:zylinderfarben[0]},
   ]);
   const [keyList,setKeyList]=useState(["Schlüssel 1","Schlüssel 2"]);
   const [matrix,setMatrix]=useState<boolean[][]>(doorList.map((_,i)=>keyList.map((_,j)=>true)));
@@ -71,12 +82,11 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
   function updateDoor(i:number,field:keyof Door,value:string|number|boolean){setDoorList(d=>d.map((door,di)=>{
     if(di!==i) return door;
     const updated={...door,[field]:value} as Door;
-    if(field==="type") updated.size=cylinderByCode[value as string].sizes[0];
-    if(field==="type" && value!=="DZ") updated.ng=false;
+    if(field==="type" && value!=="DZ"){ updated.ng=false; updated.freilauf=false; }
     return updated;
   }))}
   function addDoor(){
-    setDoorList(d=>[...d,{name:"Neue Tür",type:"DZ",size:cylinderByCode["DZ"].sizes[0],count:1,bohrschutz:"none",kernziehschutz:false,ng:false}]);
+    setDoorList(d=>[...d,{name:"Neue Tür",type:"DZ",outerMM:30,innerMM:35,count:1,bohrschutz:"none",kernziehschutz:false,ng:false,freilauf:false,zahnrad:"none",farbkappe:false,farbe:zylinderfarben[0]}]);
     setMatrix(m=>[...m,keyList.map(()=>false)]);
     setOpenDoor(doorList.length);
   }
@@ -141,9 +151,9 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
       </Panel>}
       {step===2&&<Panel title="Mengen und Sicherheitsstufe"><div className="fields">{[["doors","Türen"],["users","Nutzer"],["keys","Schlüssel"]].map(([k,l])=><label key={k}>{l}<div className="counter"><button onClick={()=>update(k as keyof Config,Math.max(1,(config as any)[k]-1))}>-</button><b>{(config as any)[k]}</b><button onClick={()=>update(k as keyof Config,(config as any)[k]+1)}>+</button></div></label>)}</div><h3>Sicherheitsstufe</h3><Choices value={String(config.security)} onChange={v=>update("security",Number(v))} items={[["1","Standard","Basis"],["2","Hoch","Empfohlen"],["3","Maximal","Premium"]]}/></Panel>}
       {step===3&&<Panel title="Schließplan">
-        <p>Legen Sie pro Tür Zylindertyp, Maß und Sicherheitsoptionen fest, und tragen Sie ein, welcher Schlüssel welche Tür öffnen soll.</p>
+        <p>Legen Sie pro Tür Zylindertyp, Maße und Sicherheitsoptionen fest, und tragen Sie ein, welcher Schlüssel welche Tür öffnen soll.</p>
 
-        <h3>Schlüssel <InfoIcon text="Jeder Schlüssel bekommt einen Namen. In der Tabelle weiter unten legen Sie fest, welche Tür dieser Schlüssel öffnen darf."/></h3>
+        <h3>Schlüssel <InfoIcon text="Jeder Schlüssel bekommt einen Namen. Bei jeder Tür können Sie unten festlegen, welche Schlüssel sie öffnen dürfen."/></h3>
         <div className="rolelist">{keyList.map((k,j)=>
           <div className="role-edit" key={j}>
             <input value={k} onChange={e=>updateKey(j,e.target.value)}/>
@@ -156,11 +166,12 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
           const isOpen=openDoor===i;
           const allowedCount=matrix[i]?.filter(Boolean).length||0;
           const cyl=cylinderByCode[door.type];
+          const isVHS=door.type==="VHS";
           return <div className={"doorcard "+(isOpen?"open":"")} key={i}>
             <div className="doorcard-summary" onClick={()=>setOpenDoor(isOpen?null:i)}>
               <span className="doorcard-arrow">{isOpen?"▾":"▸"}</span>
               <span className="doorcard-name">{door.name}</span>
-              <span className="doorcard-meta">{cyl.name} · {door.size} · {allowedCount} Schlüssel</span>
+              <span className="doorcard-meta">{cyl.name} · {isVHS?`${door.outerMM}mm Bügelhöhe`:`${door.outerMM}/${door.innerMM} mm`} · {allowedCount} Schlüssel</span>
             </div>
             {isOpen&&<div className="doorcard-body">
               <label>Bezeichnung<input value={door.name} onChange={e=>updateDoor(i,"name",e.target.value)}/></label>
@@ -170,13 +181,27 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
                   {cylinderTypes.map(t=><option key={t.code} value={t.code}>{t.name} ({t.code})</option>)}
                 </select>
               </label>
-              <label>Standardmaß<select value={door.size} onChange={e=>updateDoor(i,"size",e.target.value)}>{cyl.sizes.map(s=><option key={s}>{s}</option>)}</select></label>
-              <label>Anzahl<input type="number" min={1} value={door.count} onChange={e=>updateDoor(i,"count",Number(e.target.value))}/></label>
 
-              <h4>Sicherheitsoptionen <InfoIcon text="Bohrschutz erschwert das gewaltsame Öffnen durch Aufbohren. Kernziehschutz verhindert das Herausziehen des Zylinderkerns. Die Not-/Gefahrenfunktion erlaubt das Aufschließen von außen, auch wenn innen ein Schlüssel steckt."/></h4>
+              <div className="doorcard-fields">
+                {isVHS ? (
+                  <label>Bügelhöhe (mm)<input type="number" min={0} value={door.outerMM} onChange={e=>updateDoor(i,"outerMM",Number(e.target.value))}/></label>
+                ) : (
+                  <>
+                    <label>Außenmaß (mm) <InfoIcon text="Maß von der Außenseite der Tür (Angriffsseite) bis zur Zylindermitte."/><input type="number" min={0} value={door.outerMM} onChange={e=>updateDoor(i,"outerMM",Number(e.target.value))}/></label>
+                    <label>Innenmaß (mm) <InfoIcon text="Maß von der Innenseite der Tür bis zur Zylindermitte."/><input type="number" min={0} value={door.innerMM} onChange={e=>updateDoor(i,"innerMM",Number(e.target.value))}/></label>
+                  </>
+                )}
+                <label>Anzahl<input type="number" min={1} value={door.count} onChange={e=>updateDoor(i,"count",Number(e.target.value))}/></label>
+              </div>
+
+              <h4>Sicherheitsoptionen <InfoIcon text="Bohrschutz erschwert das gewaltsame Öffnen durch Aufbohren. Kernziehschutz verhindert das Herausziehen des Zylinderkerns. Not-/Gefahrenfunktion erlaubt das Aufschließen von außen, auch wenn innen ein Schlüssel steckt. Freilauffunktion trennt Schließbart und Kern bei abgezogenem Schlüssel und wird für bestimmte Panikschlösser benötigt."/></h4>
               <label>Bohrschutz<select value={door.bohrschutz} onChange={e=>updateDoor(i,"bohrschutz",e.target.value)}>{bohrschutzLevels.map(b=><option key={b.code} value={b.code}>{b.label}</option>)}</select></label>
               <label className="checkbox-inline"><input type="checkbox" checked={door.kernziehschutz} onChange={e=>updateDoor(i,"kernziehschutz",e.target.checked)}/> Kernziehschutz</label>
               {door.type==="DZ" && <label className="checkbox-inline"><input type="checkbox" checked={door.ng} onChange={e=>updateDoor(i,"ng",e.target.checked)}/> Not-/Gefahrenfunktion</label>}
+              {door.type==="DZ" && <label className="checkbox-inline"><input type="checkbox" checked={door.freilauf} onChange={e=>updateDoor(i,"freilauf",e.target.checked)}/> Freilauffunktion</label>}
+              <label>Zahnrad-Schließbart <InfoIcon text="Wird für bestimmte Mehrfachverriegelungssysteme benötigt. Die Zahl gibt die Anzahl der Zähne an."/><select value={door.zahnrad} onChange={e=>updateDoor(i,"zahnrad",e.target.value)}>{zahnradLevels.map(z=><option key={z.code} value={z.code}>{z.label}</option>)}</select></label>
+              <label className="checkbox-inline"><input type="checkbox" checked={door.farbkappe} onChange={e=>updateDoor(i,"farbkappe",e.target.checked)}/> Farbkappenschlüssel (leichtere Unterscheidung mehrerer Schlüssel)</label>
+              <label>Zylinderfarbe<select value={door.farbe} onChange={e=>updateDoor(i,"farbe",e.target.value)}>{zylinderfarben.map(f=><option key={f}>{f}</option>)}</select></label>
 
               <h4>Welche Schlüssel öffnen diese Tür?</h4>
               <div className="doorcard-matrix">{keyList.map((k,j)=><label key={k} className="matrix-check"><input type="checkbox" checked={matrix[i]?.[j]||false} onChange={()=>toggleMatrix(i,j)}/>{k}</label>)}</div>

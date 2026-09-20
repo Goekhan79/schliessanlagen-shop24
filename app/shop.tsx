@@ -8,7 +8,10 @@ type Door = {
   bohrschutz:string; kernziehschutz:boolean; ng:boolean;
   freilauf:boolean; zahnrad:string; farbkappe:boolean; farbe:string;
 };
-type CartItem = {product:Product; quantity:number};
+type CartItem = {
+  id:number; product:Product; quantity:number; config:Config; gsSs:string; anlagenart:string;
+  doorList:Door[]; keyList:string[]; matrix:boolean[][];
+};
 
 const eur=(c:number)=>c.toLocaleString("de-DE",{style:"currency",currency:"EUR"});
 
@@ -39,6 +42,11 @@ const zahnradLevels=[
 ];
 const zylinderfarben=["Silber (Standard)","Messing","Schwarz","Vernickelt","Edelstahloptik"];
 
+const defaultDoors=():Door[]=>[
+  {name:"Haupteingang",type:"DZ",outerMM:40,innerMM:45,count:1,bohrschutz:"BS2",kernziehschutz:false,ng:false,freilauf:false,zahnrad:"none",farbkappe:false,farbe:zylinderfarben[0]},
+];
+const defaultKeys=()=>["Schlüssel 1"];
+
 function InfoIcon({text}:{text:string}){
   const [open,setOpen]=useState(false);
   return <span className="info-icon" onClick={()=>setOpen(o=>!o)}>
@@ -51,6 +59,7 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
   const [products] = useState(initialProducts);
   const [step,setStep]=useState(1);
   const [config,setConfig]=useState<Config>({project:"new",customerType:"business",buildingType:"",doors:12,users:8,keys:20,security:2});
+  const [selected,setSelected]=useState<Product>(products[0]);
   const [cart,setCart]=useState<CartItem[]>([]);
   const [customer,setCustomer]=useState({name:"",email:"",phone:"",company:"",address:"",zip:"",city:""});
   const [message,setMessage]=useState("");
@@ -61,18 +70,17 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
     if(config.doors<=15) return "Hauptschlüssel-Anlage (HS)";
     return "Generalhauptschlüssel-Anlage (GHS)";
   },[config.customerType,config.doors,gsSs]);
-  const itemsTotal=useMemo(()=>cart.reduce((s,i)=>s+i.product.price_cents*config.doors/100*i.quantity,0),[cart,config.doors]);
-  const price=useMemo(()=>itemsTotal + config.keys*12 + config.users*18 + 180,[itemsTotal,config]);
 
-  const [doorList,setDoorList]=useState<Door[]>([
-    {name:"Haupteingang",type:"DZ",outerMM:40,innerMM:45,count:1,bohrschutz:"BS2",kernziehschutz:false,ng:false,freilauf:false,zahnrad:"none",farbkappe:false,farbe:zylinderfarben[0]},
-    {name:"Büro 1",type:"DZ",outerMM:30,innerMM:35,count:1,bohrschutz:"none",kernziehschutz:false,ng:false,freilauf:false,zahnrad:"none",farbkappe:false,farbe:zylinderfarben[0]},
-    {name:"Lager",type:"HZ",outerMM:35,innerMM:0,count:1,bohrschutz:"none",kernziehschutz:false,ng:false,freilauf:false,zahnrad:"none",farbkappe:false,farbe:zylinderfarben[0]},
-    {name:"Technikraum",type:"VHS",outerMM:30,innerMM:0,count:1,bohrschutz:"none",kernziehschutz:false,ng:false,freilauf:false,zahnrad:"none",farbkappe:false,farbe:zylinderfarben[0]},
-  ]);
-  const [keyList,setKeyList]=useState(["Schlüssel 1","Schlüssel 2"]);
+  const [doorList,setDoorList]=useState<Door[]>(defaultDoors());
+  const [keyList,setKeyList]=useState(defaultKeys());
   const [matrix,setMatrix]=useState<boolean[][]>(doorList.map((_,i)=>keyList.map((_,j)=>true)));
   const [openDoor,setOpenDoor]=useState<number|null>(0);
+
+  const cartTotal=useMemo(()=>cart.reduce((sum,item)=>{
+    const itemsTotal=item.product.price_cents*item.config.doors/100;
+    return sum + (itemsTotal + item.config.keys*12 + item.config.users*18 + 180) * item.quantity;
+  },0),[cart]);
+  const workingPrice=useMemo(()=>selected ? (selected.price_cents*config.doors/100 + config.keys*12 + config.users*18 + 180) : 0,[selected,config]);
 
   function updateKey(j:number,name:string){setKeyList(k=>k.map((x,i)=>i===j?name:x))}
   function addKey(){setKeyList(k=>[...k,`Schlüssel ${k.length+1}`]);setMatrix(m=>m.map(row=>[...row,false]))}
@@ -93,26 +101,40 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
   function removeDoor(i:number){setDoorList(d=>d.filter((_,di)=>di!==i));setMatrix(m=>m.filter((_,mi)=>mi!==i));if(openDoor===i)setOpenDoor(null)}
   function update(k:keyof Config,v:number|string){setConfig(x=>({...x,[k]:v}))}
 
-  function addToCart(p:Product){
-    setCart(c=>{
-      const existing=c.find(i=>i.product.id===p.id);
-      if(existing) return c.map(i=>i.product.id===p.id?{...i,quantity:i.quantity+1}:i);
-      return [...c,{product:p,quantity:1}];
-    });
+  function addConfigToCart(){
+    if(!selected){ setMessage("Bitte zuerst ein Produkt auswählen."); return; }
+    const item:CartItem={
+      id:Date.now(), product:selected, quantity:1, config:{...config}, gsSs, anlagenart,
+      doorList:doorList.map(d=>({...d})), keyList:[...keyList], matrix:matrix.map(r=>[...r]),
+    };
+    setCart(c=>[...c,item]);
+    setDoorList(defaultDoors());
+    setKeyList(defaultKeys());
+    setMatrix(defaultDoors().map(()=>defaultKeys().map(()=>true)));
+    setOpenDoor(0);
+    setMessage("Konfiguration wurde dem Warenkorb hinzugefügt. Sie können jetzt eine weitere Anlage konfigurieren.");
   }
-  function changeQty(id:number,qty:number){
-    if(qty<=0){ setCart(c=>c.filter(i=>i.product.id!==id)); return; }
-    setCart(c=>c.map(i=>i.product.id===id?{...i,quantity:qty}:i));
+  function removeCartItem(id:number){setCart(c=>c.filter(i=>i.id!==id))}
+  function changeCartQty(id:number,qty:number){
+    if(qty<=0){ removeCartItem(id); return; }
+    setCart(c=>c.map(i=>i.id===id?{...i,quantity:qty}:i));
   }
-  function removeFromCart(id:number){setCart(c=>c.filter(i=>i.product.id!==id))}
 
   async function order(){
-    if(cart.length===0){ setMessage("Bitte mindestens ein Produkt in den Warenkorb legen."); return; }
+    if(cart.length===0){ setMessage("Bitte mindestens eine Konfiguration in den Warenkorb legen."); return; }
     setMessage("Bestellung wird gespeichert ...");
-    const doors=doorList.map(d=>d.name);
     const items=cart.map(i=>({productId:i.product.id, quantity:i.quantity}));
+    const configuration={
+      items: cart.map(i=>({
+        productName:i.product.name, quantity:i.quantity, project:i.config.project, customerType:i.config.customerType,
+        buildingType:i.config.buildingType, anlagenart:i.anlagenart, gsSs:i.gsSs,
+        doorsCount:i.config.doors, users:i.config.users, keysCount:i.config.keys, security:i.config.security,
+        doors:i.doorList.map(d=>d.name), keyList:i.keyList, matrix:i.matrix, doorList:i.doorList,
+      })),
+    };
+    const totalCents=Math.round(cartTotal);
     const res=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-      customer, configuration:{...config,matrix,doors,keyList,anlagenart,gsSs,doorList}, totalCents:Math.round(price), items
+      customer, configuration, totalCents, items
     })});
     const data=await res.json();
     setMessage(res.ok?("Bestellung erfolgreich angelegt: "+data.orderNumber):(data.error||"Fehler"));
@@ -120,27 +142,17 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
 
   return <main>
    <header><div className="nav wrap"><a className="logo" href="#">SCHLIESSANLAGEN<span>SHOP24</span></a><nav><a href="#systeme">Systeme</a><a href="#konfigurator">Konfigurator</a><a href="/admin">Admin</a></nav>
-   {cart.length>0 && <div className="cart-badge">Warenkorb: {cart.reduce((s,i)=>s+i.quantity,0)} Artikel</div>}
+   {cart.length>0 && <div className="cart-badge">Warenkorb: {cart.length} Konfiguration{cart.length>1?"en":""}</div>}
    </div></header>
     <section className="hero"><div className="wrap heroGrid"><div><small>SCHLIESSANLAGEN ONLINE PLANEN</small><h1>Sicher.<br/><span>Passgenau.</span><br/>Einfach bestellt.</h1><p>Konfigurieren Sie Ihre Schließanlage, erstellen Sie einen Schließplan und senden Sie Ihre Bestellung direkt an den Shop.</p><a className="btn gold" href="#konfigurator">Konfigurator starten</a></div><div className="visual"><div className="cyl"></div><div className="key"></div></div></div></section>
-    <section id="systeme" className="section wrap"><div className="center"><small>PRODUKTAUSWAHL</small><h2>Schließsysteme</h2><p>Wählen Sie ein oder mehrere Produkte und legen Sie diese in den Warenkorb.</p></div><div className="cards">{products.map(p=>{
-      const inCart=cart.find(i=>i.product.id===p.id);
-      return <article className={"card "+(inCart?"selected":"")} key={p.id}><div className="prod"></div><h3>{p.name}</h3><p>{p.description}</p><strong>ab {eur(p.price_cents)}</strong><button className="btn light" onClick={()=>addToCart(p)}>{inCart?`Im Warenkorb (${inCart.quantity})`:"In den Warenkorb"}</button></article>
-    })}</div>
-    {cart.length>0 && <div className="cart-summary">
-      <h3>Warenkorb</h3>
-      <table><tbody>{cart.map(i=><tr key={i.product.id}>
-        <td>{i.product.name}</td>
-        <td><input type="number" min={0} value={i.quantity} onChange={e=>changeQty(i.product.id,Number(e.target.value))} style={{width:60}}/></td>
-        <td>{eur(i.product.price_cents*i.quantity)}</td>
-        <td><button className="btn light small" onClick={()=>removeFromCart(i.product.id)}>Entfernen</button></td>
-      </tr>)}</tbody></table>
-      <button className="btn gold" onClick={()=>document.querySelector("#konfigurator")?.scrollIntoView({behavior:"smooth"})}>Weiter zum Konfigurator</button>
-    </div>}
+    <section id="systeme" className="section wrap"><div className="center"><small>PRODUKTAUSWAHL</small><h2>Schließsysteme</h2><p>Wählen Sie das Produkt für Ihre aktuelle Konfiguration.</p></div><div className="cards">{products.map(p=>
+      <article className={"card "+(selected.id===p.id?"selected":"")} key={p.id}><div className="prod"></div><h3>{p.name}</h3><p>{p.description}</p><strong>ab {eur(p.price_cents)}</strong><button className="btn light" onClick={()=>{setSelected(p);document.querySelector("#konfigurator")?.scrollIntoView({behavior:"smooth"})}}>{selected.id===p.id?"Ausgewählt":"Für Konfiguration auswählen"}</button></article>
+    )}</div>
     </section>
     <section id="konfigurator" className="section config"><div className="wrap"><div className="center"><small>KONFIGURATOR</small><h2>Ihre Schließanlage</h2></div>
       <div className="steps">{["Projekt","Mengen","Schließplan","Bestellung"].map((x,i)=><div className={step===i+1?"on":""} key={x}>{i+1}. {x}</div>)}</div>
       {step===1&&<Panel title="Was möchten Sie planen?">
+        <p>Aktuell gewähltes Produkt: <b>{selected.name}</b></p>
         <Choices value={config.project} onChange={v=>update("project",v)} items={[["new","Neues Projekt","Neue Schließanlage"],["existing","Bestehende Anlage","Erweiterung / Nachbestellung"]]}/>
         <h3>Art des Projekts</h3>
         <Choices value={config.customerType} onChange={v=>update("customerType",v)} items={[["business","Gewerbe","Büro, Objekt oder Hausverwaltung"],["private","Privat","Einfamilienhaus / Wohnung"]]}/>
@@ -210,14 +222,29 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
           </div>
         })}</div>
         <button className="btn gold" onClick={addDoor}>+ Weitere Tür hinzufügen</button>
+
+        <div className="addtocart-box">
+          <p>Aktuelle Konfiguration: <b>{selected.name}</b> · geschätzt {eur(workingPrice)}</p>
+          <button className="btn gold" onClick={addConfigToCart}>Diese Konfiguration in den Warenkorb legen</button>
+          {message && <div className="message">{message}</div>}
+        </div>
       </Panel>}
       {step===4&&<Panel title="Bestellung abschließen"><div className="orderGrid"><div>
         <h3>Warenkorb</h3>
-        {cart.length===0 ? <p>Noch keine Produkte im Warenkorb.</p> : <table><tbody>{cart.map(i=><tr key={i.product.id}><td>{i.product.name}</td><td>{i.quantity}x</td><td>{eur(i.product.price_cents*i.quantity)}</td></tr>)}</tbody></table>}
-        <p>{config.doors} Türen - {config.users} Nutzer - {config.keys} Schlüssel</p>
-        <div className="price">{eur(price)}</div>
+        {cart.length===0 ? <p>Noch keine Konfiguration im Warenkorb. Gehen Sie zurück zu Schritt 3, um eine hinzuzufügen.</p> : (
+          <table><tbody>{cart.map(item=>{
+            const itemPrice=(item.product.price_cents*item.config.doors/100 + item.config.keys*12 + item.config.users*18 + 180) * item.quantity;
+            return <tr key={item.id}>
+              <td>{item.product.name}<br/><small>{item.doorList.length} Türen · {item.keyList.length} Schlüssel · {item.anlagenart}</small></td>
+              <td><input type="number" min={0} value={item.quantity} onChange={e=>changeCartQty(item.id,Number(e.target.value))} style={{width:60}}/></td>
+              <td>{eur(itemPrice)}</td>
+              <td><button className="btn light small" onClick={()=>removeCartItem(item.id)}>Entfernen</button></td>
+            </tr>;
+          })}</tbody></table>
+        )}
+        <div className="price">{eur(cartTotal)}</div>
         <h3>Kundendaten</h3><div className="form">{Object.entries({name:"Name *",email:"E-Mail *",phone:"Telefon",company:"Firma",address:"Straße & Hausnummer *",zip:"PLZ *",city:"Ort *"}).map(([k,l])=><label key={k}>{l}<input value={(customer as any)[k]} onChange={e=>setCustomer(x=>({...x,[k]:e.target.value}))}/></label>)}</div></div>
-        <aside><h3>Zusammenfassung</h3><p>Artikel<br/><b>{cart.reduce((s,i)=>s+i.quantity,0)} Stück</b></p><p>Geschätzter Preis<br/><b>{eur(price)}</b></p><button className="btn gold full" onClick={order}>Kostenpflichtig bestellen</button>{message ? <div className="message">{message}</div> : null}<small>Demo: Für einen Livegang müssen Zahlungsanbieter, E-Mail-Versand und rechtliche Checkout-Texte ergänzt werden.</small></aside>
+        <aside><h3>Zusammenfassung</h3><p>Konfigurationen<br/><b>{cart.length} Stück</b></p><p>Geschätzter Preis<br/><b>{eur(cartTotal)}</b></p><button className="btn gold full" onClick={order}>Kostenpflichtig bestellen</button>{message ? <div className="message">{message}</div> : null}<small>Demo: Für einen Livegang müssen Zahlungsanbieter, E-Mail-Versand und rechtliche Checkout-Texte ergänzt werden.</small></aside>
       </div></Panel>}
       <div className="actions">{step>1 ? <button className="btn light" onClick={()=>setStep(step-1)}>Zurück</button> : <span/>}{step<4 ? <button className="btn gold" onClick={()=>setStep(step+1)}>Weiter</button> : null}</div>
     </div></section>

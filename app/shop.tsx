@@ -54,7 +54,6 @@ function InfoIcon({text}:{text:React.ReactNode}){
 function InfoIcon({text}:{text:React.ReactNode}){
   const [open,setOpen]=useState(false);
   return <span className="info-icon" onClick={()=>setOpen(o=>!o)}>
-  ...
     ⓘ
     {open && <span className="info-tip">{text}<button onClick={(e)=>{e.stopPropagation();setOpen(false)}}>Schließen</button></span>}
   </span>;

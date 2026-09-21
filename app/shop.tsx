@@ -142,7 +142,7 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
 
   return <main>
    <header><div className="nav wrap"><a className="logo" href="#">SCHLIESSANLAGEN<span>SHOP24</span></a><nav><a href="#systeme">Systeme</a><a href="#konfigurator">Konfigurator</a><a href="/admin">Admin</a></nav>
-   {cart.length>0 && <div className="cart-badge">Warenkorb: {cart.length} Konfiguration{cart.length>1?"en":""}</div>}
+   {cart.length>0 && <div className="cart-badge" onClick={()=>{setStep(4);document.querySelector("#konfigurator")?.scrollIntoView({behavior:"smooth"})}} style={{cursor:"pointer"}}>🛒 Warenkorb: {cart.length} Konfiguration{cart.length>1?"en":""}</div>}
    </div></header>
     <section className="hero"><div className="wrap heroGrid"><div><small>SCHLIESSANLAGEN ONLINE PLANEN</small><h1>Sicher.<br/><span>Passgenau.</span><br/>Einfach bestellt.</h1><p>Konfigurieren Sie Ihre Schließanlage, erstellen Sie einen Schließplan und senden Sie Ihre Bestellung direkt an den Shop.</p><a className="btn gold" href="#konfigurator">Konfigurator starten</a></div><div className="visual"><div className="cyl"></div><div className="key"></div></div></div></section>
     <section id="systeme" className="section wrap"><div className="center"><small>PRODUKTAUSWAHL</small><h2>Schließsysteme</h2><p>Wählen Sie das Produkt für Ihre aktuelle Konfiguration.</p></div><div className="cards">{products.map(p=>

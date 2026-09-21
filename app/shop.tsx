@@ -48,7 +48,14 @@ const defaultDoors=():Door[]=>[
 const defaultKeys=()=>["Schlüssel 1"];
 
 function InfoIcon({text}:{text:React.ReactNode}){
-  function MeasureDiagram(){
+  const [open,setOpen]=useState(false);
+  return <span className="info-icon" onClick={()=>setOpen(o=>!o)}>
+    ⓘ
+    {open && <span className="info-tip">{text}<button onClick={(e)=>{e.stopPropagation();setOpen(false)}}>Schließen</button></span>}
+  </span>;
+}
+
+function MeasureDiagram(){
   return <svg width="220" height="110" viewBox="0 0 220 110" style={{marginBottom:8}}>
     <rect x="0" y="0" width="220" height="110" fill="#f5f5f5"/>
     <rect x="98" y="10" width="24" height="80" fill="#b0b6bd" stroke="#6b7280"/>

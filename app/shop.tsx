@@ -48,10 +48,6 @@ const defaultDoors=():Door[]=>[
 const defaultKeys=()=>["Schlüssel 1"];
 
 function InfoIcon({text}:{text:React.ReactNode}){
-    </svg>;
-}
-
-function InfoIcon({text}:{text:React.ReactNode}){
   const [open,setOpen]=useState(false);
   return <span className="info-icon" onClick={()=>setOpen(o=>!o)}>
     ⓘ

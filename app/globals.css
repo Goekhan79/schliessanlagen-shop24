@@ -12,3 +12,7 @@
 .doorcard-fields label { margin-bottom: 0; }
 .checkbox-inline { margin-bottom: 10px !important; }
 .rolelist { margin-bottom: 12px; }
+.doorcard-name { font-weight: 700; font-size: 1.1em; color: #1a1a1a; }
+.doorcard-meta { font-size: 0.85em; color: #777; margin-left: 8px; }
+.doorcard-summary { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.doorcard { border: 1px solid #e0e0e0; border-radius: 8px; padding: 4px 16px; }

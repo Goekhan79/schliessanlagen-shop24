@@ -16,34 +16,51 @@ function downloadOrderExcel(o: any) {
     ["Adresse", o.address],
     ["PLZ", o.zip],
     ["Ort", o.city],
-   ...(o.items||[]).map((i:any,idx:number):[string,string]=>[`Produkt ${idx+1}`, `${i.name} (${i.quantity}x)`]),
     ["Summe", (o.total_cents / 100).toFixed(2).replace(".", ",") + " EUR"],
     ["Status", o.status],
-    ["Projekt", config.project],
-    ["Kundentyp", config.customerType],
-    ["Anlagenart", config.anlagenart],
-    ["Schließungsart", config.customerType==="private" ? config.gsSs : "–"],
-    ["Nutzer", String(config.users ?? "")],
-    ["Schlüssel", String(config.keys ?? "")],
-    ["Sicherheitsstufe", String(config.security ?? "")],
   ];
 
-  if (config.doorList) {
+  const items = config.items || [];
+  items.forEach((item: any, idx: number) => {
     rows.push(["", ""]);
-    rows.push(["Türliste (Zylindertyp / Anzahl / Maß außen / Maß innen)", ""]);
-    config.doorList.forEach((d: any) => {
-      rows.push([d.name, `${d.type} / ${d.count}x / ${d.outerMM}mm außen / ${d.innerMM}mm innen`]);
-    });
-  }
+    rows.push([`--- Konfiguration ${idx + 1} ---`, ""]);
+    rows.push(["Produkt", item.productName]);
+    rows.push(["Menge", String(item.quantity)]);
+    rows.push(["Projekt", item.project]);
+    rows.push(["Kundentyp", item.customerType]);
+    rows.push(["Gebäudeart", {efh:"Einfamilienhaus",mfh:"Mehrfamilienhaus",office:"Büro",commercial:"Gewerbe"}[item.buildingType as string] || item.buildingType]);
+    rows.push(["Anlagenart", item.anlagenart]);
+    rows.push(["Schließungsart", item.customerType==="private" ? item.gsSs : "–"]);
+    rows.push(["Nutzer", String(item.users ?? "")]);
+    rows.push(["Schlüsselanzahl (geplant)", String(item.keysCount ?? "")]);
+    rows.push(["Sicherheitsstufe", String(item.security ?? "")]);
 
-  if (config.matrix && config.doors && config.roles) {
-    rows.push(["", ""]);
-    rows.push(["Berechtigungsmatrix", ""]);
-    config.doors.forEach((door: string, i: number) => {
-      const allowed = config.roles.filter((_: string, j: number) => config.matrix[i]?.[j]);
-      rows.push([door, allowed.join(", ") || "-"]);
-    });
-  }
+    if (item.doorList) {
+      rows.push(["", ""]);
+      rows.push(["Türliste", ""]);
+      item.doorList.forEach((d: any) => {
+        const maß = d.type === "VHS" ? `${d.outerMM}mm Bügelhöhe` : `${d.outerMM}/${d.innerMM} mm`;
+        const optionen = [
+          d.bohrschutz !== "none" ? d.bohrschutz : null,
+          d.kernziehschutz ? "Kernziehschutz" : null,
+          d.ng ? "Not-/Gefahrenfunktion" : null,
+          d.freilauf ? "Freilauffunktion" : null,
+          d.zahnrad !== "none" ? d.zahnrad : null,
+          d.farbkappe ? "Farbkappenschlüssel" : null,
+        ].filter(Boolean).join(", ") || "keine";
+        rows.push([d.name, `${d.type} / ${d.count}x / ${maß} / Farbe: ${d.farbe} / Optionen: ${optionen}`]);
+      });
+    }
+
+    if (item.matrix && item.doors && item.keyList) {
+      rows.push(["", ""]);
+      rows.push(["Schlüssel-Berechtigungen", ""]);
+      item.doors.forEach((door: string, i: number) => {
+        const allowed = item.keyList.filter((_: string, j: number) => item.matrix[i]?.[j]);
+        rows.push([door, allowed.join(", ") || "-"]);
+      });
+    }
+  });
 
   const escape = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const csv = "\uFEFF" + rows.map(r => r.map(escape).join(";")).join("\r\n");

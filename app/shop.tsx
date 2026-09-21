@@ -231,8 +231,8 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
                   <label>Bügelhöhe (mm)<input type="number" min={0} value={door.outerMM} onChange={e=>updateDoor(i,"outerMM",Number(e.target.value))}/></label>
                 ) : (
                   <>
-                    <label>Außenmaß (mm) <InfoIcon text="Maß von der Außenseite der Tür (Angriffsseite) bis zur Zylindermitte."/><input type="number" min={0} value={door.outerMM} onChange={e=>updateDoor(i,"outerMM",Number(e.target.value))}/></label>
-                    <label>Innenmaß (mm) <InfoIcon text="Maß von der Innenseite der Tür bis zur Zylindermitte."/><input type="number" min={0} value={door.innerMM} onChange={e=>updateDoor(i,"innerMM",Number(e.target.value))}/></label>
+                    <label>Außenmaß (mm) <InfoIcon text={<><MeasureDiagram/><p>Maß von der Außenseite der Tür (Angriffsseite) bis zur Zylindermitte. So wird gemessen: von der äußeren Zylinderkante bis zur Mitte des Schließriegels bzw. der Befestigungsschraube.</p></>}/><input type="number" min={0} value={door.outerMM} onChange={e=>updateDoor(i,"outerMM",Number(e.target.value))}/></label>
+                    <label>Innenmaß (mm) <InfoIcon text={<><MeasureDiagram/><p>Maß von der Innenseite der Tür bis zur Zylindermitte. So wird gemessen: von der inneren Zylinderkante bis zur Mitte des Schließriegels bzw. der Befestigungsschraube.</p></>}/><input type="number" min={0} value={door.innerMM} onChange={e=>updateDoor(i,"innerMM",Number(e.target.value))}/></label>
                   </>
                 )}
                 <label>Anzahl<input type="number" min={1} value={door.count} onChange={e=>updateDoor(i,"count",Number(e.target.value))}/></label>

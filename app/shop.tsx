@@ -47,7 +47,39 @@ const defaultDoors=():Door[]=>[
 ];
 const defaultKeys=()=>["Schlüssel 1"];
 
-function InfoIcon({text}:{text:string}){
+function InfoIcon({text}:{text:React.ReactNode}){
+  function MeasureDiagram(){
+  return <svg width="220" height="110" viewBox="0 0 220 110" style={{marginBottom:8}}>
+    <rect x="0" y="0" width="220" height="110" fill="#f5f5f5"/>
+    <rect x="98" y="10" width="24" height="80" fill="#b0b6bd" stroke="#6b7280"/>
+    <line x1="20" y1="50" x2="98" y2="50" stroke="#c0392b" strokeWidth="2"/>
+    <line x1="20" y1="45" x2="20" y2="55" stroke="#c0392b" strokeWidth="2"/>
+    <line x1="98" y1="45" x2="98" y2="55" stroke="#c0392b" strokeWidth="2"/>
+    <text x="35" y="42" fontSize="11" fill="#c0392b">A (außen)</text>
+    <line x1="122" y1="50" x2="200" y2="50" stroke="#2980b9" strokeWidth="2"/>
+    <line x1="122" y1="45" x2="122" y2="55" stroke="#2980b9" strokeWidth="2"/>
+    <line x1="200" y1="45" x2="200" y2="55" stroke="#2980b9" strokeWidth="2"/>
+    <text x="140" y="42" fontSize="11" fill="#2980b9">B (innen)</text>
+    <text x="20" y="98" fontSize="11" fill="#555">Außenseite (Angriffsseite)</text>
+    <text x="115" y="98" fontSize="11" fill="#555">Innenseite</text>
+  </svg>;
+}
+
+function CylinderDiagram({code}:{code:string}){
+  if(code==="RZ") return <svg width="140" height="80" style={{marginBottom:8}}><circle cx="70" cy="40" r="28" fill="#b0b6bd" stroke="#6b7280"/><circle cx="70" cy="40" r="6" fill="#4b5563"/></svg>;
+  if(code==="HeZ") return <svg width="140" height="80" style={{marginBottom:8}}><rect x="30" y="26" width="40" height="24" rx="4" fill="#b0b6bd" stroke="#6b7280"/><rect x="70" y="32" width="16" height="12" fill="#9ca3af"/></svg>;
+  if(code==="VHS") return <svg width="140" height="90" style={{marginBottom:8}}><path d="M45 40 v-15 a15 15 0 0 1 30 0 v15" fill="none" stroke="#6b7280" strokeWidth="6"/><rect x="35" y="40" width="50" height="40" rx="6" fill="#b0b6bd" stroke="#6b7280"/></svg>;
+  const rightEnd = code==="KZ" ? <circle cx="152" cy="40" r="10" fill="#d1d5db" stroke="#6b7280"/>
+    : code==="HZ" ? <rect x="144" y="34" width="10" height="12" fill="#9ca3af"/>
+    : code==="AZ" ? <rect x="146" y="28" width="20" height="6" fill="#9ca3af"/>
+    : code==="BZ" ? null
+    : <circle cx="150" cy="40" r="6" fill="#4b5563"/>;
+  return <svg width="170" height="80" style={{marginBottom:8}}>
+    <rect x="10" y="28" width="140" height="24" rx="4" fill="#b0b6bd" stroke="#6b7280"/>
+    {code!=="BZ" && <circle cx="10" cy="40" r="6" fill="#4b5563"/>}
+    {rightEnd}
+  </svg>;
+}
   const [open,setOpen]=useState(false);
   return <span className="info-icon" onClick={()=>setOpen(o=>!o)}>
     ⓘ
@@ -188,7 +220,7 @@ export default function Shop({initialProducts}:{initialProducts:Product[]}) {
             {isOpen&&<div className="doorcard-body">
               <label>Bezeichnung<input value={door.name} onChange={e=>updateDoor(i,"name",e.target.value)}/></label>
 
-              <label>Zylindertyp <InfoIcon text={cyl.desc}/>
+              <label>Zylindertyp <InfoIcon text={<><CylinderDiagram code={door.type}/><p>{cyl.desc}</p></>}/>
                 <select value={door.type} onChange={e=>updateDoor(i,"type",e.target.value)}>
                   {cylinderTypes.map(t=><option key={t.code} value={t.code}>{t.name} ({t.code})</option>)}
                 </select>

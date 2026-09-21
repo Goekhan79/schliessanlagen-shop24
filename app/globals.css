@@ -3,3 +3,12 @@
 .info-tip { position:absolute; z-index:20; top:20px; left:0; background:#fff; border:1px solid #ddd; border-radius:8px; padding:12px; width:260px; box-shadow:0 4px 12px rgba(0,0,0,.15); font-size:0.85em; line-height:1.4; }
 .info-tip button { display:block; margin-top:8px; font-size:0.8em; }
 .checkbox-inline { display:flex; align-items:center; gap:6px; margin:6px 0; }
+.doorlist { margin-top: 20px; }
+.doorcard { margin-bottom: 12px; }
+.doorcard-summary { padding: 12px 0; }
+.doorcard-body { padding-top: 8px; }
+.doorcard-body label { display: block; margin-bottom: 14px; }
+.doorcard-fields { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.doorcard-fields label { margin-bottom: 0; }
+.checkbox-inline { margin-bottom: 10px !important; }
+.rolelist { margin-bottom: 12px; }

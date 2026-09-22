@@ -94,12 +94,6 @@ function InfoIcon({ text }: { text: string }) {
     {open && <span className="info-tip">{text}<button onClick={(e) => { e.stopPropagation(); setOpen(false) }}>Schließen</button></span>}
   </span>;
 }
-  const [open,setOpen]=useState(false);
-  return <span className="info-icon" onClick={()=>setOpen(o=>!o)}>
-    ⓘ
-    {open && <span className="info-tip">{text}<button onClick={(e)=>{e.stopPropagation();setOpen(false)}}>Schließen</button></span>}
-  </span>;
-}
 
 export default function Shop({initialProducts}:{initialProducts:Product[]}) {
   const [products] = useState(initialProducts);

@@ -87,8 +87,6 @@ function CylinderDiagram({code}:{code:string}){
     {rightEnd}
   </svg>;
 }
-}
-
 function InfoIcon({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
   return <span className="info-icon" onClick={() => setOpen(o => !o)}>
